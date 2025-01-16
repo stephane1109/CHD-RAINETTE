@@ -2,6 +2,8 @@
 # # Rainette ## développé par Julien Barnier
 # https://cran.r-project.org/web/packages/rainette/vignettes/introduction_usage.html
 # https://juba.r-universe.dev/builds
+# CHD "simple" à partir d'un fichier texte formaté aux exigences IRaMuTEQ
+# 16-01-2025
 ################################
 
 # 1. Installer et charger les librairies nécessaires
