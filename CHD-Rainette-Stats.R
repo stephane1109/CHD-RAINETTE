@@ -75,7 +75,6 @@ cat("DEBUG 1 : Table de répartition des classes :\n")
 print(table(docvars(corpus)$Classes))
 
 
-
 #########################################################
 # 7) Extraction des stats par classe (rainette_stats)
 #########################################################
@@ -135,7 +134,7 @@ if ("feature" %in% names(res_stats_df)) {
 #########################################################
 names(res_stats_df)[names(res_stats_df) == "ClusterID"] <- "Classe"
 # Convertir en numérique pour que la boucle puisse faire (Classe == cl)
-# Actuellement, docvars(corpus)$Classes = 0..7 ou 1..8 => comparez selon votre cas
+# Actuellement, docvars(corpus)$Classes = 1..8
 res_stats_df$Classe <- as.numeric(res_stats_df$Classe)
 
 
