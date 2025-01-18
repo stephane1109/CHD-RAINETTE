@@ -1,0 +1,75 @@
+# install.packages(c("rainette", "quanteda", "wordcloud", "RColorBrewer"))
+
+# 1) Chargement des bibliothèques
+library(rainette)         # CHD + rainette_stats
+library(quanteda)         # Construction dfm, tokens,...
+library(wordcloud)        # Génération nuages de mots
+library(RColorBrewer)     # Palette de couleurs
+
+
+# 2) Paramétrages et définition des répertoires d'export
+base_dir <- "Le_chemin_de_votre_repertoire"  # Le chemin du répertoire de travail
+export_dir <- file.path(base_dir, "exports")
+dir.create(export_dir, showWarnings = FALSE, recursive = TRUE)
+
+
+# 3) Chargement du corpus
+chemin_fichier <- file.path(base_dir, "le_nom_de_votre_fichier.txt") # le nom de votre fichier texte déja formté aux exigences IRAMUTEQ
+corpus <- import_corpus_iramuteq(chemin_fichier) # Import du fichier formaté aux exigences IRAMUTEQ
+cat("Nombre de documents importés :", ndoc(corpus), "\n")
+
+# Affichage des cinq premiers documents pour vérification
+apercu <- head(as.character(corpus), 5)
+cat("Aperçu des cinq premiers documents :\n")
+print(apercu)
+
+
+# 4) Prétraitement du texte (quanteda)
+tok <- tokens(corpus, remove_punct = TRUE, remove_numbers = TRUE)
+tok <- tokens_split(tok, "'")              # on split l'apostrophe
+tok <- tokens_remove(tok, stopwords("fr")) # suppression des stopwords en français
+tok <- tokens_tolower(tok)                 # transformation en minuscules
+
+dfm <- dfm(tok)                            # création de la matrice document-terme
+print(dfm)
+
+
+# 5) Calcul TF-IDF
+# Transformation de la matrice en pondération TF-IDF
+dfm_tfidf <- dfm_tfidf(dfm)
+cat("Dimensions du DFM TF-IDF :", dim(dfm_tfidf), "\n")
+
+
+# 5.1) Export de la matrice TF-IDF
+# Conversion de la matrice en data.frame pour export
+tfidf_matrix <- convert(dfm_tfidf, to = "data.frame")
+fichier_tfidf <- file.path(export_dir, "matrice_tfidf.csv")
+write.csv(tfidf_matrix, fichier_tfidf, row.names = FALSE)
+cat("Matrice TF-IDF exportée dans :", fichier_tfidf, "\n")
+
+
+# 6) Génération des nuages de mots basés sur TF-IDF
+wordcloud_dir <- file.path(export_dir, "wordclouds_tfidf")
+dir.create(wordcloud_dir, showWarnings = FALSE, recursive = TRUE)
+
+# Calcul des scores TF-IDF moyens par terme sur l'ensemble des documents
+tfidf_means <- colMeans(dfm_tfidf)
+# Tri décroissant pour obtenir les termes les plus significatifs
+tfidf_means <- sort(tfidf_means, decreasing = TRUE)
+
+# Sélection des 100 premiers termes pour le nuage de mots global
+top_n_global <- 100
+termes_top <- names(tfidf_means)[1:top_n_global]
+frequences_top <- tfidf_means[1:top_n_global]
+
+png_fichier_global <- file.path(wordcloud_dir, "wordcloud_global_tfidf.png")
+png(png_fichier_global, width = 800, height = 600)
+wordcloud(
+  words = termes_top,
+  freq  = frequences_top,
+  scale = c(10, 0.5),
+  max.words = top_n_global,
+  colors = brewer.pal(8, "Dark2")
+)
+dev.off()
+cat("Nuage de mots global TF-IDF enregistré dans :", png_fichier_global, "\n")
