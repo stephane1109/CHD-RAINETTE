@@ -18,7 +18,7 @@
 ###############################################################################
 
 # 1) Chargement des bibliothèques
-library(rainette)         # CHD + rainette_stats
+library(rainette)         # CHD
 library(quanteda)         # Construction dfm, tokens,...
 library(wordcloud)        # Génération nuages de mots
 library(RColorBrewer)     # Palette de couleurs
