@@ -4,7 +4,8 @@
 # https://juba.r-universe.dev/builds
 ################################
 
-# install.packages(c("rainette", "quanteda", "wordcloud", "RColorBrewer", "igraph", "dplyr", "shiny", "factoMineR", "factoextra"))
+
+# install.packages(c("rainette", "quanteda", "wordcloud", "RColorBrewer", "igraph", "dplyr", "shiny"))
 # install.packages("htmltools")
 
 ###############################################################################
@@ -32,14 +33,14 @@ library(htmltools)
 #########################################################
 # 1) Paramétrages et définition des répertoires d'export
 #########################################################
-base_dir <- "Le_chemin_de_votre_repertoire"
+base_dir <- "/Users/stephanemeurisse/Documents/Recherche/ia-1an/rainette"
 export_dir <- file.path(base_dir, "exports")
 dir.create(export_dir, showWarnings = FALSE, recursive = TRUE)
 
 #########################################################
 # 2) Chargement et découpage du corpus
 #########################################################
-chemin_fichier <- file.path(base_dir, "le_nom_de_votre_fichier.txt")
+chemin_fichier <- file.path(base_dir, "psychiatrie-darmanin-clean.txt")
 corpus <- import_corpus_iramuteq(chemin_fichier)
 cat("Nombre de documents importés :", ndoc(corpus), "\n")
 
@@ -108,6 +109,8 @@ res_stats_list <- rainette_stats(
   show_negative = TRUE,
   max_p = 0.05                # Filtrage sur la p-value
 )
+
+print(res_stats_list)
 
 # Export des statistiques dans un fichier CSV
 res_stats_df <- bind_rows(res_stats_list, .id = "ClusterID")
@@ -198,43 +201,55 @@ cooc_dir <- file.path(export_dir, "cooccurrences")
 dir.create(cooc_dir, showWarnings = FALSE, recursive = TRUE)
 
 for (cl in clusters) {
+  # Filtrer les tokens pour la classe en cours
   tokens_cluster <- tokens_subset(tok, docvars(filtered_corpus)$Classes == cl)
   if (length(tokens_cluster) == 0) {
     cat("Classe", cl, ": aucun token.\n")
     next
   }
   
-  fcm_cluster <- fcm(tokens_cluster, context = "window", window = 5, tri = FALSE)
+  # Calcul des cooccurrences avec une fenêtre glissante
+  fcm_cluster <- fcm(tokens_cluster, context = "window", window = 5, tri = FALSE) # Fenêtre de 5 termes
   term_freq <- sort(colSums(fcm_cluster), decreasing = TRUE)
   
+  # Sélection des termes les plus fréquents
   top_feat <- 20
   feat_cluster <- names(term_freq)[seq_len(min(top_feat, length(term_freq)))]
   fcm_cluster_sel <- fcm_select(fcm_cluster, feat_cluster, selection = "keep")
   
+  # Conversion en matrice d'adjacence
   adj <- as.matrix(fcm_cluster_sel)
   g <- graph_from_adjacency_matrix(adj, mode = "undirected", weighted = TRUE, diag = FALSE)
   
+  # Génération des couleurs pour les nœuds
+  library(RColorBrewer)
+  num_nodes <- length(V(g))  # Nombre total de nœuds dans le graphe
+  palette_colors <- brewer.pal(min(8, num_nodes), "Set3")  # Utiliser la palette "Set3"
+  V(g)$color <- palette_colors[seq_along(V(g))]  # Associer une couleur à chaque nœud
+  
+  # Sauvegarde du graphe en PNG
   png_filename <- file.path(cooc_dir, paste0("cluster_", cl, "_fcm_network.png"))
   png(png_filename, width = 1600, height = 1200)
   
+  # Visualisation du graphe
   plot(
     g,
-    layout         = layout_with_fr(g),
+    layout         = layout_with_fr(g),  # Disposition Fruchterman-Reingold
     main           = paste("Cooccurrences - Classe", cl),
-    vertex.size    = 12,
-    vertex.label   = V(g)$name,
-    vertex.label.cex = 1,
-    edge.width     = E(g)$weight / 2,
-    edge.color     = "gray80"
+    vertex.size    = 16,                 # Taille des nœuds
+    vertex.color   = V(g)$color,         # Couleur des nœuds
+    vertex.label   = V(g)$name,          # Étiquettes des nœuds
+    vertex.label.cex = 1,                # Taille des étiquettes
+    edge.width     = E(g)$weight / 2,    # Épaisseur des liens proportionnelle au poids
+    edge.color     = "gray80"            # Couleur des liens
   )
   dev.off()
+  
   cat("Graph de cooccurrences pour la classe", cl, ":", png_filename, "\n")
 }
+
 
 #########################################################
 # 10) Affichage de la classification avec Rainette
 #########################################################
 rainette_explor(res, dfm, filtered_corpus)
-
-
-
